@@ -634,7 +634,7 @@ summary(myMHT2)
 :::{#prompt .message style="color: blue;"}
 Extract the simultaneous confidence intervals of your Dunnett test comparisons using function `confint()`, using the confidence level indicated by your specific experimental parameters. Store the object returned by `confint()` into a variable called myCIs03. Echo this object and inspect the table of confidence intervals.
 :::
-
+ 
 
 ```{r Q1_2_e_ci}
 # ADD YOUR CODE HERE
@@ -671,6 +671,7 @@ Enter the name of your final method recommendation ("best method") as variable `
 ```{r 1_2_f_final}
 # ADD YOUR CODE HERE
 
+best_final <- "DE.2747409.D"
 
 ## (DON'T FORGET THAT THE NAME OF THE BEST METHOD SHOULD BE STORED AS VARIABLE
 ## best_final).
