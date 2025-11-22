@@ -337,7 +337,7 @@ myCIs02
 ## Confidence intervals of the difference of means
 
 par(mar = c(5, 10, 4, 2))
-plot(myCIs02, xlab = "Difference of means",cex.axis = 0.7)
+plot(myCIs02, xlab = "Difference of means between methods",cex.axis = 0.7)
 
 ## (DON'T FORGET THAT YOUR OUTPUT OBJECT SHOULD BE STORED IN A VARIABLE CALLED 
 ## myCIs02).
@@ -645,7 +645,7 @@ myCIs03
 ## Confidence intervals of the difference of means
 
 par(mar = c(5, 10, 4, 2))
-plot(myCIs03, xlab = "Difference of means",cex.axis = 0.7)
+plot(myCIs03, xlab = "Difference of means between methods across problems",cex.axis = 0.7)
 
 ## (DON'T FORGET THAT YOUR OUTPUT OBJECT SHOULD BE STORED IN A VARIABLE CALLED 
 ## myCIs03).
