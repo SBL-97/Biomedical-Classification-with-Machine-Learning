@@ -456,7 +456,7 @@ Provide a brief comment (up to 150 words) on whether the best method (in terms o
 :::
 
 :::{#Q1_1_g_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-At the predefined significance level (alpha = 0.05), the best method (method D) performs significantly better than the second-best method (method A). Since the confidence intervals between method D and A derived from Tukey’s test does not include zero, this indicates that the reduction in mean loss for method D is statistically significant. Furthermore, the observed standardised effect size (Cohen's d = -3.85) and its magnitude (|d| = 3.85) show that method D achieves a much lower mean loss compared to method A, corresponding to an extremely large performance difference. Since its magnitude is much larger than the desired minimally relevant effect size (MRES) (d* = 0.9), better performance of method D over method A is not only statistically significant but also practically relevant in the design of this experiment.
+At the predefined significance level (alpha = 0.05), the best method (method D) performs significantly better than the second-best method (method A). Since the confidence intervals between method D and A derived from Tukey’s test does not include zero, this indicates that the reduction in mean loss for method D is statistically significant. Furthermore, the observed standardised effect size (Cohen's d = -3.85) and its magnitude (|d| = 3.85) show that method D achieves a much lower mean loss compared to method A, corresponding to an extremely large performance difference. Since its magnitude is much larger than the desired minimally relevant effect size (MRES) (d* = 0.9), better performance of method D over method A is not only statistically significant but also practically relevant in this experiment.
 
 :::
 
@@ -659,8 +659,9 @@ Based on your results, which of the methods would recommend as the selected stra
 :::
 
 :::{#Q1_2_f_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-Some text here...
 
+Our aim for this experiment was to identify whether there’s a significant difference in performance between the methods, which method is the best
+one 
 
 :::
 
