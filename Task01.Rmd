@@ -1,10 +1,12 @@
 ---
 title: "SCEM Final Coursework"
-subtitle: "Task I"
 author: "Sangbin Lim (2747409)"
-output: html_document
-editor_options: 
-  markdown: 
+subtitle: Task I
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  markdown:
     wrap: 72
 ---
 
@@ -151,7 +153,9 @@ myres<- lapply(1:4, \(m){
   data.frame(Method = method.names[m], Value = obs)}) %>% 
   bind_rows()
 
-myres
+# Example of the first 6 rows in actual "myres" data frame (120 × 2).
+head(myres)
+
 ## (DON'T FORGET THAT YOUR OBSERVATIONS SHOULD BE STORED IN A DATA FRAME CALLED 
 ## myres WITH THE STRUCTURE DESCRIBED ABOVE).
 ```
@@ -456,7 +460,7 @@ Provide a brief comment (up to 150 words) on whether the best method (in terms o
 :::
 
 :::{#Q1_1_g_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-At the predefined significance level (alpha = 0.05), the best method (Method D) performs significantly better than the second-best method (Method A). Since the confidence intervals between Method D and A derived from Tukey’s test does not include zero, this indicates that the reduction in mean loss for Method D is statistically significant. Furthermore, the observed standardised effect size (Cohen's d ≈ -3.85) and its magnitude (|d| ≈ 3.85) show that Method D achieves a much lower mean loss compared to Method A, corresponding to an extremely large performance difference. Since its magnitude is much larger than the desired minimally relevant effect size (MRES) (d* = 0.9), better performance of Method D over Method A is not only statistically significant but also practically relevant in this experiment.
+At the predefined significance level (alpha = 0.05), the best method (Method D) performs significantly better than the second-best method (Method A). Since the confidence intervals between Method D and A derived from Tukey’s test does not include zero, this indicates that the reduction in mean loss for Method D is statistically significant. Furthermore, the observed standardised effect size (Cohen's d $\approx$ -3.85) and its magnitude (|d| $\approx$ 3.85) show that Method D achieves a much lower mean loss compared to Method A, corresponding to an extremely large performance difference. Since its magnitude is much larger than the desired minimally relevant effect size (MRES) (d* = 0.9), better performance of Method D over Method A is not only statistically significant but also practically relevant in this experiment.
 
 :::
 
@@ -582,7 +586,8 @@ myres2<- lapply(seq_along(problem.names),\(p){
 
 myres2$Method = relevel(myres2$Method, ref = best_method)
 
-myres2
+# Example of the first 6 rows in actual "myres2" data frame (2160 × 5).
+head(myres2) 
 
 ## (DON'T FORGET THAT YOUR OBSERVATIONS SHOULD BE STORED IN A DATA FRAME CALLED 
 ## myres2 WITH THE STRUCTURE DESCRIBED ABOVE).
@@ -662,7 +667,7 @@ Based on your results, which of the methods would recommend as the selected stra
 
 Our aim in this experiment was to determine whether there is a significant difference in performance between the methods across problems and to identify which method should be recommended for the company to adopt. Based on the initial analysis conducted with one-way ANOVA and an extended analysis conducted with a post-hoc Dunnett test, Method D had the lowest mean loss among the four methods.
 
-From the results of Dunnett test, the contrasts among the methods using Method D as the reference showed that Methods B and C had significantly larger mean losses than Method D. The fact that their estimated mean loss differences are comparatively large (estimate ≈ 0.5 & 0.9) and statistically significant that there is a difference among the means (p < 1e-04) provides strong evidence that they are statistically and practically worse than Method D, thus not recommended for the company to consider. 
+From the results of Dunnett test, the contrasts among the methods using Method D as the reference showed that Methods B and C had significantly larger mean losses than Method D. The fact that their estimated mean loss differences are comparatively large (estimate $\approx$ 0.5 & 0.9) and statistically significant that there is a difference among the means (p < 1e-04) provides strong evidence that they are statistically and practically worse than Method D, thus not recommended for the company to consider. 
 
 However, the result for Method A was different. The estimated mean loss difference between Method A and D was only about 0.06 and was not statistically significant that Method A's mean loss is different from Method D (p = 0.333). Also, as its confidence interval includes zero in between, we can not ignore the possibility that the mean losses between Method A and D are equal. Therefore, we do not have sufficient evidence to conclude that Method A performs worse than Method D.
 
