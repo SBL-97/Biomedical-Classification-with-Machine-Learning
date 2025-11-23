@@ -240,7 +240,7 @@ Provide a brief (less than 150 words) description and explanation of the statist
 
 :::{#Q1_1_e_txt .message style="color: black; border: 1px outset black; background-color: #eeeeff;"}
 - The residuals of the model are assumed to follow a Normal distribution with mean 0. Practically, this corresponds to assuming that the sampling distribution of the mean is approximately Normal. Therefore, we plot normal QQ-plots of the residuals to assess their normality.
-- The variance of the residuals is assumed to be constant across method groups (homoscedasticity). Non-identical variance distribution indicate heteroscedasticity, under which the F-statistic from ANOVA can yield distorted p-values and misleading conclusions due to overly significant results and reduced ability to detect true effects (Type I error ↑, Power ↓). Therefore, we conduct Fligner-Kileen test to assess homoscedasticity.
+- The variance of the residuals is assumed to be constant across method groups (homoscedasticity). Non-identical variance distribution indicate heteroscedasticity, under which the F-statistic from ANOVA can result to distorted p-values and misleading conclusions due to overly significant results and reduced ability to detect true effects (Type I error ↑, Power ↓). Therefore, we conduct Fligner-Kileen test to assess homoscedasticity.
 - The residuals of the model are assumed to be independent within and across methods. Failure could result in biased standard errors and p-values. However, since our experiment is designed to be executed independently with a separate random seed, dependence of the residuals is not expected.
 
 :::
@@ -311,7 +311,7 @@ Perform a post-hoc Tukey test, using the multcomp package. Store the object retu
 # ADD YOUR CODE HERE
 
 # Post-hoc Tukey test
-## Since the Tukey test results are significant (p < 1e-06) and residual distribution plot demonstrates difference in the spread of residuals across method groups, it is reasonable to say that all of the methods show significantly different mean performances. Although method C showed the highest mean response, followed by methods B and A, whereas method D showed the lowest mean response, since the smaller values of the mean loss function corresponds to better performance, method D showed the best performance (i.e. the smallest mean loss). However, this is reliable when all the assumptions for the ANOVA test are met. As we have encountered violation of the homoscedasticity assumption, post-hoc test that does not require the assumption of equal residual variance across the method groups such as the Games-Howell test could be conducted.
+## Since the Tukey test results are significant (p < 1e-06) and residual distribution plot demonstrates difference in the spread of residuals across method groups, it is reasonable to say that all of the methods show significantly different mean performances. Although Method C showed the highest mean response, followed by Methods B and A, whereas Method D showed the lowest mean response, since the smaller values of the mean loss function corresponds to better performance, Method D showed the best performance (i.e. the smallest mean loss). However, this is reliable when all the assumptions for the ANOVA test are met. As we have encountered violation of the homoscedasticity assumption, post-hoc test that does not require the assumption of equal residual variance across the method groups such as the Games-Howell test could be conducted.
 
 myMHT1 <- glht(mytest01, linfct = mcp(Method = "Tukey"))
 summary(myMHT1)
@@ -353,7 +353,7 @@ Based on your point estimates obtained in item 1.1.c, what is the method that pr
 ```{r Q1_1_g_best}
 # ADD YOUR CODE HERE
 
-## Tukey pairwise mean differences show the minimised loss ordering of method D > A > B > C. (smaller = better)
+## Tukey pairwise mean differences show the minimised loss ordering of Method D > A > B > C. (smaller = better)
 myMHT1_Summary <- sort(summary(myMHT1)$test$coefficients)
 
 pairwise_contrast_summary <- data_frame(
@@ -363,7 +363,7 @@ pairwise_contrast_summary <- data_frame(
 
 pairwise_contrast_summary
 
-## Method-wise mean loss also shows the minimised loss ordering of method D > A > B > C.
+## Method-wise mean loss also shows the minimised loss ordering of Method D > A > B > C.
 method_loss_summary <- myres %>%
   group_by(Method) %>%
   summarise(mean_loss = mean(Value), .groups = "drop") %>%
@@ -371,7 +371,7 @@ method_loss_summary <- myres %>%
 
 method_loss_summary
 
-## Hence, the method that presents the best (i.e. the smallest) mean loss would be method D.
+## Hence, the method that presents the best (i.e. the smallest) mean loss would be Method D.
 best_method <- as.character(method_loss_summary$Method[1])
 
 best_method
@@ -380,7 +380,7 @@ best_method
 ```
 
 :::{#prompt .message style="color: blue;"}
-Based on the CIs you calculated after the Tukey tests, what is the confidence interval on the difference of the means between the best method above and the second-best one? Store your confidence interval in a single-row dataframe called `topComparison`, with the following columns: 
+Based on the CIs you calculated after the Tukey tests, what is the confidence interval on the difference of the means between the best Method Above and the second-best one? Store your confidence interval in a single-row dataframe called `topComparison`, with the following columns: 
 
 - `Method1` (containing the name of the best method that you identified above)
 - `Method2` (containing the name of the second-best method)
@@ -444,7 +444,7 @@ sigma_pooled <- sqrt(sigma_sq_pooled)
 diff_means <- topComparison$DiffMeans
 
 # Observed standardised effect size (Cohen's d coefficient)
-## The observed standardised effect size (Cohen's d coefficient = -3.85) and its magnitude (|d|) being much larger than predefined MRES (0.9) indicate that method D performs significantly better than method A by achieving a lower mean loss.
+## The observed standardised effect size (Cohen's d coefficient = -3.85) and its magnitude (|d|) being much larger than predefined MRES (0.9) indicate that Method D performs significantly better than Method A by achieving a lower mean loss.
 CohenD <- diff_means / sigma_pooled
 CohenD
 
@@ -456,7 +456,7 @@ Provide a brief comment (up to 150 words) on whether the best method (in terms o
 :::
 
 :::{#Q1_1_g_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-At the predefined significance level (alpha = 0.05), the best method (method D) performs significantly better than the second-best method (method A). Since the confidence intervals between method D and A derived from Tukey’s test does not include zero, this indicates that the reduction in mean loss for method D is statistically significant. Furthermore, the observed standardised effect size (Cohen's d = -3.85) and its magnitude (|d| = 3.85) show that method D achieves a much lower mean loss compared to method A, corresponding to an extremely large performance difference. Since its magnitude is much larger than the desired minimally relevant effect size (MRES) (d* = 0.9), better performance of method D over method A is not only statistically significant but also practically relevant in this experiment.
+At the predefined significance level (alpha = 0.05), the best method (Method D) performs significantly better than the second-best method (Method A). Since the confidence intervals between Method D and A derived from Tukey’s test does not include zero, this indicates that the reduction in mean loss for Method D is statistically significant. Furthermore, the observed standardised effect size (Cohen's d ≈ -3.85) and its magnitude (|d| ≈ 3.85) show that Method D achieves a much lower mean loss compared to Method A, corresponding to an extremely large performance difference. Since its magnitude is much larger than the desired minimally relevant effect size (MRES) (d* = 0.9), better performance of Method D over Method A is not only statistically significant but also practically relevant in this experiment.
 
 :::
 
@@ -634,7 +634,7 @@ summary(myMHT2)
 :::{#prompt .message style="color: blue;"}
 Extract the simultaneous confidence intervals of your Dunnett test comparisons using function `confint()`, using the confidence level indicated by your specific experimental parameters. Store the object returned by `confint()` into a variable called myCIs03. Echo this object and inspect the table of confidence intervals.
 :::
- 
+
 
 ```{r Q1_2_e_ci}
 # ADD YOUR CODE HERE
@@ -660,8 +660,13 @@ Based on your results, which of the methods would recommend as the selected stra
 
 :::{#Q1_2_f_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
 
-Our aim for this experiment was to identify whether there’s a significant difference in performance between the methods, which method is the best
-one 
+Our aim in this experiment was to determine whether there is a significant difference in performance between the methods across problems and to identify which method should be recommended for the company to adopt. Based on the initial analysis conducted with one-way ANOVA and an extended analysis conducted with a post-hoc Dunnett test, Method D had the lowest mean loss among the four methods.
+
+From the results of Dunnett test, the contrasts among the methods using Method D as the reference showed that Methods B and C had significantly larger mean losses than Method D. The fact that their estimated mean loss differences are comparatively large (estimate ≈ 0.5 & 0.9) and statistically significant that there is a difference among the means (p < 1e-04) provides strong evidence that they are statistically and practically worse than Method D, thus not recommended for the company to consider. 
+
+However, the result for Method A was different. The estimated mean loss difference between Method A and D was only about 0.06 and was not statistically significant that Method A's mean loss is different from Method D (p = 0.333). Also, as its confidence interval includes zero in between, we can not ignore the possibility that the mean losses between Method A and D are equal. Therefore, we do not have sufficient evidence to conclude that Method A performs worse than Method D.
+
+Based on the results obtained, Method D will still remain as the best method to be recommended as it has the smallest estimated mean loss. However, after the further test conducted, Method A appears to be a competitive alternative to Method D. Hence, it could be considered as a second best method when it has other advantages under real world constraints compared to Method D.
 
 :::
 
