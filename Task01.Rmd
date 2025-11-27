@@ -150,7 +150,7 @@ nruns <- exp_pars$nruns
 
 myres<- lapply(1:4, \(m){
   obs <- replicate(nruns,log(ExpDE2(method.name = method.names[m], problem.name = my.problem))) 
-  data.frame(Method = method.names[m], Value = obs)}) %>% 
+  tibble(Method = method.names[m], Value = obs)}) %>% 
   bind_rows()
 
 # Example of the first 6 rows in actual "myres" data frame (120 × 2).
@@ -417,7 +417,7 @@ if (first_pw_diff %in% rownames(CI_02)) {
   upper <- -row["lwr"]
 } 
 
-topComparison <- data.frame(
+topComparison <- tibble(
   Method1  = best_method,
   Method2  = second_method,
   DiffMeans = as.numeric(diff),
@@ -574,7 +574,7 @@ myres2<- lapply(seq_along(problem.names),\(p){
     obs <- replicate(nruns,log(ExpDE2(method.name = method.names[m],
                                     problem.name = problem.names[p])))
     
-    data.frame(Method = factor(method.names[m]),
+    tibble(Method = factor(method.names[m]),
                Problem = factor(problem.names[p]), 
                Problem_type = factor(problem.types[p]), 
                Problem_dimension = problem.dimensions[p],

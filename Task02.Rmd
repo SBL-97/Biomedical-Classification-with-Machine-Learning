@@ -20,7 +20,7 @@ automatically install those packages (if needed) and load them. Any other calls 
 
 ```{r ID, echo=FALSE, message=FALSE, warning=FALSE}
 ## We will use your student ID as the seed for the random number generator.
-MY_STUDENT_ID <- "2747409" # <-- Replace "ABCDEFG" by your student ID number (as an integer, i.e., without quotes).
+MY_STUDENT_ID <- 2747409 # <-- Replace "ABCDEFG" by your student ID number (as an integer, i.e., without quotes).
 ```
 
 ```{r Setup, echo=FALSE, message=FALSE, warning=FALSE}
@@ -36,8 +36,10 @@ allowed.packages <- c("tidyverse",
                       "parsnip", 
                       "bonsai", 
                       "healthyR.ai", 
-                      "knitr")
-
+                      "knitr",
+                      "DataExplorer",
+                      "visdat"
+                      )
 
 ## DO NOT CHANGE ANYTHING ELSE IN THIS CODE BLOCK
 for (i in seq_along(allowed.packages)){
@@ -93,6 +95,239 @@ At the end of your EDA section, you should also include a short commentary on wh
 You can use as many code blocks as needed, but don't overdo it (remember - everything needs to have a proper rationale). 
 :::
 
+### 1.1 Data overview
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+The dataset is derived from a binary epitope prediction problem, in which each observation is described by a large set of numerical predictive features. An exploratory data analysis
+provided an initial overview of potential dependencies caused by "Info_group", distribution of the target "Class", and the behavior of features "feat_" in terms of scale, variability and missingness.
+:::
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+Quick overview shows that some of the columns that begin with "Info_" are mainly identifiers or meta data. As these variables do not carry predictive information about the target data, discarding them could be considered. Moreover, further investigation is required as the presence of some missing values and variables with very different scales could be identified from the dataset. Data preprocessing such as imputation and standardisation can be used to ensure that the predictors are on comparable scales and that missing values do not bias the prediction model.
+:::
+
+```{r, echo = FALSE}
+
+glimpse(df)
+
+```
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+The dataset is high-dimensional with 7403 rows and 390 columns including 2 discrete and 388 continuous variables. This indicates that most of the predictors are numerical, thus there is no need for further categorical encoding to be done. Instead, preprocessing can focus on handling missing values, standardising feature scales, and applying dimensionality reduction.
+:::
+
+```{r, echo = FALSE}
+# Structure of the dataset.
+# 1) Two ID columns named “Info_PepID” and “Info_pos”. Together, these two columns provide a unique reference to each row.
+# 2) One Group column named “Info_group”
+# 3) Other columns starting with “Info_” that are not informative and should be discarded.
+# 4) A few hundred feature columns with names starting with “feat_”, containing numerical predictive features that were calculated for each observation.
+# 5) 1 Class column, containing the target class.
+
+
+df_summary <- introduce(df) %>% tibble()
+t(df_summary)
+
+```
+
+### 1.2 Class distribution and grouping structure
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+Analysis of distribution of the target variable "Class" and summary of the grouping variable "Info_group" were conducted to assess the target distribution proportion and existence of dependencies within the dataset.
+:::
+
+```{r, echo = FALSE}
+# Class distribution
+df %>% count(Class, name = "Count") %>% mutate(Distribution_Proportions = percent((Count/sum(Count))))
+
+```
+
+```{r, echo = FALSE}
+# Summary stats of "Info_group" 
+df %>% count(Info_group) %>% summary()
+
+```
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+The distribution of the variable "Class" seems fairly balanced, showing a split of 59% for the negative and 41% for the positive class. In contrast, the summary of "Info_group" provides clear evidence of dependencies within the dataset, with the number of observations ranging from 1 to 632, with an average of approximately 13.53 observations per group. Therefore, the assumption of independence among the observations is likely to be violated if each observation is treated independently. Hence, to avoid data leakage, preprocessing and modelling should be done at the group level so that all observations from the same group are assigned either to the training or to the evaluation set.
+:::
+
+### 1.3 Missing values
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+Analysis of the missing values were conducted to assess the amount and pattern of missing values in the dataset.
+:::
+
+```{r, echo = FALSE}
+
+# Total Missing rate
+total_na_rate <- df_summary$total_missing_values  / df_summary$total_observations
+percent(total_na_rate, accuracy = 0.01)
+
+```
+
+```{r, echo = FALSE}
+
+# Each variable's missing rate ratio
+variable_na_rate <- tibble(
+  Variable    = names(df),
+  NA_ratio = percent(sapply(df, \(x) mean(is.na(x)) * 100), accuracy = 0.01)
+)
+
+variable_na_rate
+
+```
+
+```{r, echo = FALSE}
+
+# Top 20 of variable missing rate
+top_na_rate <- variable_na_rate %>%
+  filter(NA_ratio > 0) %>%
+  arrange(desc(NA_ratio)) %>%
+  slice_head(n = 20) %>%
+  mutate(Variable = fct_reorder(Variable, NA_ratio))
+
+ggplot(top_na_rate, aes(x = Variable, y = NA_ratio)) +
+  geom_col() +
+  coord_flip() +
+  theme_bw() +
+  ylab("Missing Rate") +
+  xlab("Variable") +
+  theme(axis.text.y = element_text(hjust = 1))
+
+```
+
+
+```{r, echo = FALSE}
+
+# Rows with NA in target and non-feature variables
+colSums(is.na(df[, c("Info_PepID", "Info_pos","Info_protein_id", "Info_group", "Class")]))
+df %>% filter(is.na(Info_pos)|is.na(Info_protein_id))
+
+```
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+The overall proportion of missing values ($\approx$ 0.02%) is extremely low with 499 missing values out of 2,887,170 total entries. Each variable's missing rates tend to be very low and are mostly found in a subset of feature variables. This suggests that a simple imputation strategy, such as median imputation for numerical features, should be sufficient to handle the few missing values, without needing to drop them. Furthermore, no concerning missing values were found in the target and non-feature variables. Therefore, since missingness is limited to a few feature variables only, the next important aspect to examine is the distribution and scale of the features for feature scaling and dimensionality reduction.
+:::
+
+### 1.4 Feature distributions and scale
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+Analysis of the distributions and scales of the feature variables was conducted to assess their ranges, variability and differences in the scale.
+:::
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+Summary statistics of features including minimum, maximum, mean, and range were computed to identify the characteristics of each feature's scale. 
+:::
+
+```{r, echo = FALSE}
+
+# Summary stats of feature variables
+feat_variables <- df %>% select(starts_with("feat_"))
+
+feat_stats  <-
+  tibble(
+    Variable  = names(feat_variables),        
+    Min  = apply(feat_variables, 2, min, na.rm = TRUE),  
+    Max  = apply(feat_variables, 2, max, na.rm = TRUE),
+    Mean = apply(feat_variables, 2, mean, na.rm = TRUE),
+    Range = Max - Min
+  ) 
+
+feat_stats
+```
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+The histogram of feature ranges showed variations of their range which indicated heterogeneity in scale across features.
+:::
+
+```{r, echo = FALSE}
+
+# The histogram of feature range
+ggplot(feat_stats, aes(x = Range)) +
+  geom_histogram(bins = 50) +
+  scale_x_log10() +
+  theme_bw() +
+  labs(x = "Feature range (log10 scale)", y = "Count")
+
+```
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+To have a closer look into the features scale, top 20 features with the largest range were extracted and plotted. The result showed highlighted features such as "feat_local_SOCN_Grantham.lag" and "feat_local_MolWeight" that could lead to information overload on the model due to wide spectrum of its range compared to other features.    
+:::
+
+```{r, echo = FALSE}
+
+# Top 20 of feature range
+top_feat_range <- feat_stats %>%
+  arrange(desc(Range)) %>%
+  slice_head(n = 20) %>%
+  mutate(Variable = fct_reorder(Variable, Range))
+
+top_feat_range
+
+# Top 20 of feature range plot
+ggplot(top_feat_range, aes(x = Variable, y = Range)) +
+  geom_col() +
+  coord_flip() +
+  scale_y_log10() +
+  theme_bw() +
+  labs(
+    title = "Top 20 of feature range (log10 scale)",
+    x = "Feature",
+    y = "Range"
+  )
+
+```
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+To check whether range difference is due to outliers, ranges were contrasted with truncated ranges. Removal of the upper/lower 0.1% of the data lead to the range reduction concentrated between 10 to 30%, indicating that most of the features show small change in scale when their tails are trimmed, while some show large reduction due to influence of their outliers.
+:::
+
+```{r, echo = FALSE}
+
+# Function for trimmed range
+myrange <- function(x, trim = 0){
+  x <- x[!is.na(x)]          # NA 제거
+  n  <- length(x)
+  lo <- floor(n * trim) + 1
+  hi <- n + 1 - lo
+
+  return(diff(range(sort.int(x)[lo:hi])))
+}
+
+# Range comparison between feature variables
+tmp_range <- tibble(
+  Variable  = names(feat_variables),
+  Range_00  = apply(feat_variables, 2, myrange, trim = 0),
+  Range_001 = apply(feat_variables, 2, myrange, trim = 0.001)) %>%
+  mutate(RangeRed_percent = (1 - Range_001 / Range_00) * 100)
+
+# Range reduction after truncating 0.01% upper/lower tails histogram plot
+ggplot(tmp_range, aes(x = RangeRed_percent)) +
+  geom_histogram(bins = 50) +
+  theme_bw() +
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  labs(title = "Range reduction after truncating 0.1% upper/lower tails", x = "Range reduction (%)", y = "Count")
+
+
+```
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+The overview of feature distributions and scales show heterogeneous scales and high dimensionality. Hence, feature standardisation and dimensionality reduction will be performed to control the scale difference, redundancy and stability of the model.
+:::
+
+### 1.5 EDA summary and implications for preprocessing
+
+:::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+Based on the EDA, the following aspects of the dataset should be taken into account during preprocessing:
+
+* Discard "Info_" variables that act primarily as identifiers / meta data.
+* Split train and test data at the group level of "Info_group" to avoid data leakage.
+* Apply simple median imputation for missing features.
+* Standardise features to a common scale and conduct a dimensionality reduction such as PCA to reduce redundancy and increase stability to the model.
+:::
+
 *****
 
 ## 2. Data preprocessing and feature engineering
@@ -113,8 +348,97 @@ At the end of this section you should also include a short commentary on what ch
 You can use as many code blocks as needed, but don't overdo it (remember - everything needs to have a proper rationale). If you compare different pre-processing options, make sure to make it clear, and to indicate at the end which option you selected, and why. 
 
 **Note**: In this section you'll be basically defining which data transformations you will later incorporate into your predictive pipeline. When you build the pipeline in the next section, you'll encapsulate all those steps (together with the model) into a single object that you can fit and deploy as a single unit.
+
+### 2.1 Train–test split with groups
+
+:::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
 :::
 
+참고용 (삭제예정)
+Since the final goal of this task is to build a predictive model, it is important to keep aside an independent portion of the data for final model assessment. To avoid overestimating performance, I create a train–test split early in the analysis and treat the test set as a proxy for future, unseen data. In this dataset, observations are not fully independent: rows that share the same value of `Info_group` are known to be related and should be kept together. For this reason, I do not use a simple random split such as `initial_split()`. Instead, I use a grouped split based on `Info_group`, so that each group appears either entirely in the training set or entirely in the test set. This prevents data leakage, where information from the same group could otherwise leak from the training set into the test set.
+
+참고용 (삭제예정)
+Following the EDA, the first preprocessing step is to isolate a test set for final performance assessment. To obtain an unbiased estimate of generalisation, this test set must not be used during model selection or tuning. Because rows that share the same value of `Info_group` are not independent, the split must be performed at the group level: all observations from a given group should be assigned either to the training set or to the test set, but never split across both. A simple random row-wise split would violate this requirement and lead to data leakage.
+
+여기 텍스트(3–5문장 정도):
+
+- 왜 train/test를 미리 나눠두는지 (과적합 평가, generalisation)  
+- 이 데이터는 Info_group 내에서 의존성이 있기 때문에  
+  → 일반 `initial_split()` 대신 `group_initial_split()`을 써야 한다는 설명  
+- 같은 group이 train과 test에 동시에 들어가면 data leakage가 생긴다는 말
+
+train/test 행 수, 그룹 수가 어느 정도인지 살짝 확인하고 한두 문장으로 적기
+
+```{r, echo = FALSE}
+set.seed(MY_STUDENT_ID)
+
+split <- group_initial_split(df, group = Info_group, prop = 0.8)
+
+df.train <- training(split)
+df.test <- testing(split)
+
+nrow(df.train); nrow(df.test)
+```
+
+:::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+The resulting split allocates approximately 80% of the observations (and groups) to the training set and 20% to the test set, which is sufficient for both model development and a reasonably sized holdout for evaluation.
+
+참고용 (삭제예정)
+This split allocates roughly 80% of the observations and groups to the training set and keeps the remaining 20% as a holdout test set. The subsequent preprocessing, feature engineering and model fitting steps will be based solely on `train_data`, while `test_data` will only be used later for final model assessment.
+
+
+
+
+### 2.2 Preprocessing recipe
+
+:::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+According to the data description, the variables whose names start with `Info_` are mostly identifiers or metadata and are not intended to be used directly as predictors, except for the grouping variable. In the modelling pipeline, I therefore focus on the numerical features whose names start with `feat_` and use these as the predictors for `Class`. Before fitting any models, I need to handle potential missing values and differences in scale across features. To do this in a systematic way, I define a preprocessing recipe that imputes missing values in the predictors (for example, using the median within the training data) and then standardises all feature columns. Because there are several hundred features and they may have very different ranges, normalisation helps many algorithms to behave more stably. If needed, the same framework could also accommodate additional steps such as dimensionality reduction (e.g. PCA) at a later stage. By encoding these steps in a recipe and preparing it only on the training data, I ensure that the estimated preprocessing parameters are not influenced by the test or holdout data, which helps to avoid data leakage.
+
+참고용 (삭제예정)
+For modelling, I do not use the `Info_` variables as predictors, since they are identifiers or metadata rather than informative features. Instead, I focus on the numerical `feat_` variables and treat `Class` as the outcome. Motivated by the EDA, I define a preprocessing recipe that (i) selects the `feat_` columns as predictors, (ii) imputes missing values in the predictors using the median computed from the training data, and (iii) standardises all predictors to have zero mean and unit variance. In later steps, this recipe will also be extended to include a dimensionality reduction step (PCA) for at least one of the modelling pipelines.
+
+
+여기 텍스트(4–7문장):
+
+- Info_PepID, Info_pos, Info_protein_id 등 Info_ 변수들은 예측에 직접 쓰지 않겠다고 설명  
+- `feat_`로 시작하는 수치형 변수들만 predictor로 사용할 것이라고 명시  
+- 결측치 처리를 어떻게 할 계획인지 (예: 중앙값 대체)  
+- 변수 간 스케일 차이가 커보여서 표준화(normalization/standardization)를 적용하겠다는 설명  
+- 필요하면 나중에 PCA 같은 차원 축소를 추가할 수도 있다고 한 줄 언급
+
+
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+:::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+By encoding these transformations in a recipe and preparing it only on the training data, I ensure that the imputation and scaling parameters are estimated without reference to the test or holdout sets. When the recipe is later applied to `test_data` or `df_holdout`, exactly the same transformations are used with the parameters learned from `train_data`, which helps to prevent data leakage. Overall, the preprocessing step transforms the original high-dimensional feature space into a standardised representation that is more suitable for the models considered in the next section.
+(여기에서 “before vs after”는 간단히: 예전엔 서로 다른 scale, NA 있었음 → 지금은 imputed + scaled 라고 정리)
+
+이 아래에:
+“recipe 안에서 전처리를 정의하면, train 데이터에서만 이를 학습하고 test/holdout에는 동일한 변환만 적용되므로 data leakage를 방지할 수 있다” 같은 설명을 꼭 붙여주면 좋아.
 
 *****
 
@@ -132,8 +456,121 @@ Add here your modelling steps. Your solution should include both your code (whic
 Please refer to the CW specs for other requirements of this step (including, e.g., the addition of a dimensionality reduction step into your pipeline).
 
 You can use as many code blocks as needed, but don't overdo it (remember - everything needs to have a proper rationale). If you compare different models, make sure to make it clear, and to indicate at the end which pipeline option is your final selected one.
+
 :::
 
+### 3.1 Grouped cross-validation
+
+:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+To select and tune models using only the training data, I use grouped cross-validation. Because of the dependence structure induced by `Info_group`, folds are created at the group level so that all observations from a given group belong to the same fold. This mirrors the way the train–test split was created and avoids leakage of group-specific information across folds. I evaluate models mainly using the F1 score, which is more informative than accuracy when the classes are not perfectly balanced.
+
+참고용 (삭제예정)
+Model selection and hyperparameter tuning are carried out using resampling within the training data. Because the observations are grouped by `Info_group`, it would be misleading to assign different rows from the same group to different folds. Instead, I use a grouped resampling scheme where folds are created at the group level, so that each group appears entirely in one fold at a time. This mirrors the way the train–test split was created and respects the underlying dependence structure in the data. As performance metrics, I focus on the F1 score, since the target classes are not perfectly balanced and F1 gives a more informative summary of performance on both classes than accuracy alone, while still reporting accuracy for reference.
+
+여기 텍스트:
+
+- hyperparameter 튜닝과 모델 선택을 위해 train_data 안에서 CV를 사용할 것  
+- 이때도 Info_group을 기준으로 fold를 나눠야 한다는 점을 다시 강조  
+- F1 score를 주요 평가 척도로 사용할 거라고 언급
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+예시!!!!!!!!!
+### 3.2 Baseline model: Logistic regression 
+
+:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+As a preliminary model, I use penalised logistic regression, which is a simple and interpretable classifier. This baseline allows me to check that the preprocessing and resampling pipeline works correctly and provides a reference level of performance. The model is combined with the `base_rec` preprocessing recipe in a tidymodels workflow and evaluated using the grouped cross-validation folds.
+
+참고용 (삭제예정)
+As a baseline model, I start with penalised logistic regression. This model is relatively simple and interpretable, and it provides a useful reference point against which more complex models can be compared. Using the preprocessing recipe defined earlier, the logistic regression is fitted within a tidymodels workflow and evaluated under the grouped cross-validation scheme. The cross-validated F1 and accuracy scores indicate how well a linear decision boundary in the feature space can separate the two classes. These results also serve as a sanity check that the preprocessing and resampling pipeline is working as intended before introducing more flexible models.
+
+여기 텍스트(2–4문장):
+
+- 단순하고 해석이 쉬운 baseline 모델로 로지스틱 회귀를 선택한 이유  
+- 이 baseline은 “전처리 + 파이프라인이 제대로 돌아가는지” 확인 역할도 한다는 점
+
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+
+:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+The baseline logistic regression achieves an average F1 score of approximately [fill in] and an accuracy of [fill in] across the cross-validation folds. This indicates that a linear classifier can capture some of the signal in the data, but also leaves room for improvement using more flexible models or dimensionality reduction.
+
+참고용 (삭제예정)
+In our experiments, the logistic regression achieved an average F1 score of approximately XX on the training folds, which is reasonable but leaves room for improvement, especially in terms of capturing more complex relationships between the features and the target.
+
+코드 아래에:
+CV 결과에서 F1, accuracy가 어느 정도인지 한두 문장으로 정리
+baseline으로 사용할 만한지 간단 코멘트
+
+
+### 3.3 Tuned model with dimensionality reduction (예: logistic + PCA, 또는 다른 모델 + PCA)
+
+:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+To explore a more flexible modelling strategy and satisfy the coursework requirement of including dimensionality reduction, I build a second pipeline that combines PCA with a classifier. Starting from the `pca_rec` recipe defined earlier, I tune the number of principal components as well as model-specific hyperparameters. This can help to mitigate issues caused by the very high dimensionality and correlation structure of the original features, while still retaining most of the predictive signal in a lower-dimensional space.
+
+참고용 (삭제예정)
+To capture potential nonlinear relationships and interactions between features, I also consider a random forest classifier. Random forests are generally robust to high-dimensional feature spaces and can model complex decision boundaries without requiring extensive feature engineering. In this analysis, I tune at least two key hyperparameters: the number of predictors considered at each split (`mtry`) and the minimum number of samples required in a terminal node (`min_n`). These hyperparameters are explored over a grid using the same grouped cross-validation folds as for the baseline model. After tuning, I compare the cross-validated F1 scores of the random forest to those of the logistic regression. If the random forest consistently achieves a higher F1 score, this suggests that the additional flexibility of the ensemble model is beneficial for this problem; otherwise, the simpler baseline might be preferred.
+
+여기 텍스트:
+
+- 비선형 관계를 잡을 수 있고 고차원 피처에도 비교적 강한 모델로 랜덤 포레스트를 사용하겠다는 설명  
+- 최소 2개의 hyperparameter를 튜닝할 계획임을 밝히기 (예: mtry, min_n)
+
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+Across the grid of tuning parameters, the best PCA-based logistic regression pipeline attains an average F1 score of around [fill in], which is [higher/lower/similar] compared to the baseline model without dimensionality reduction. Based on this comparison, I select [state which pipeline: e.g. the PCA-based logistic regression] as the final modelling pipeline, since it offers [brief justification: e.g. better F1 performance and a more compact feature representation].
+(여기서 baseline vs PCA 모델 중 무엇을 최종 선택하는지 한 줄로 명확히 써 주는 게 중요함.)
+
+참고용 (삭제예정)
+In our results, the best random forest configuration reached an average F1 score of approximately YY, which was higher/lower than the baseline, indicating that it is (or is not) a clear improvement over logistic regression for this dataset.
+
+이 밑에:
+F1 기준으로 어떤 parameter 조합이 괜찮은지 간단히 언급
+baseline(logistic)과 성능을 비교해서 “RF가 더 좋다/비슷하다” 설명
 
 *****
 
@@ -148,6 +585,48 @@ Use your pipeline to generate predictions for your test set, and calculate the o
 
 You can use as many code blocks as needed, but it's likely that this section can be completed with a single one. Make sure that your performance indicators are clearly echoed, so that a reader can easily check if after re-running your script. Add a short comment on the observed performance (is it good? Is it poor? Remember that you're not being assessed on the performance of your models, but on the soundness of your approach).
 :::
+
+
+
+:::{#Model_assessment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+In this section, I estimate the generalisation performance of the final selected pipeline on the holdout test set created earlier. I first finalise the workflow with the best tuning parameters and fit it on the full training data, then use it to generate predictions for `test_data`. The resulting F1 score on the test set provides an unbiased estimate of how well the model is expected to perform on new, unseen data.
+
+참고용 (삭제예정)
+Once the final model and its hyperparameters have been chosen based on the grouped cross-validation results, I refit this model on the full training set using the same preprocessing recipe. The held-out test set, which was set aside earlier and not used during model selection or tuning, is then used for a final performance assessment. This evaluation provides an estimate of how well the model is expected to generalise to new, unseen data drawn from the same population. On the test set, I again report the F1 score (along with accuracy and the confusion matrix) to remain consistent with the metrics used during cross-validation.
+
+여기 텍스트(3–5문장):
+
+- 이제는 train_data 전체로 최종 모델을 학습하고,  
+  처음에 떼어놓았던 test_data로 generalisation 성능을 평가하겠다고 설명  
+- test set은 모델 선택/튜닝에는 전혀 사용하지 않았다는 점을 강조
+
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+```{r, echo = FALSE}
+```
+
+:::{#Model_assessment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+The final pipeline achieves an F1 score of approximately [fill in] on the test set, which is broadly consistent with the cross-validated performance on the training data. This suggests that the model is not severely overfitting and should generalise reasonably well to similar new data.
+
+참고용 (삭제예정)
+The final model achieved an F1 score of approximately ZZ on the test set, which is broadly consistent with the cross-validated performance. This suggests that the model is not severely overfitting the training data, and that its estimated generalisation performance is reasonably stable.
+
+코드 아래에는:
+test set F1이 어느 정도인지, CV 결과와 비교해서
+“과적합이 심하지 않다/약간 성능이 떨어지지만 허용 범위다” 같은 해석을 2–4문장으로 정리.
 
 *****
 
@@ -169,6 +648,35 @@ Make sure that the data file __df_holdout.rds__ is placed in the same folder as 
 
 - Save your predictions dataframe to a file called __mypreds.rds__. You will be able to submit this file, and it will be used to give you some feedback on the actual performance of your pipeline on new data.
 :::
+
+:::{#Model_deployment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+Finally, I deploy the fitted pipeline on the external holdout dataset `df_holdout`, for which the class labels are unknown. Using the same preprocessing and model as in the previous section, I generate predicted classes and save them in the format required by the coursework for submission.
+
+참고용 (삭제예정)
+The last step is to deploy the final trained model on the separate holdout dataset (`df_holdout`), for which the true class labels are not provided. Using the same preprocessing recipe and model configuration as in the previous sections, I generate predicted classes for each observation in the holdout set. The predictions are then stored in the format required by the coursework (for example, including the relevant identifiers and saving the result as an RDS file). This file contains the model’s final predictions for all holdout observations and will be used by the instructors to evaluate the model’s performance on completely unseen data.
+
+여기 텍스트:
+
+- 최종 모델을 실제 새로운 데이터(df_holdout)에 적용해서 Class를 예측하는 단계라는 설명  
+- 이 예측 결과는 과제가 요구하는 형식(RDS 파일 등)으로 저장되고,  
+  숨겨진 정답과 비교되어 최종 점수에 반영된다는 점
+  
+  
+:::{#Model_deployment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+some words here..........
+:::
+
+참고용 (삭제예정)
+The object `mypreds` contains the identifiers `Info_PepID`, `Info_pos`, and the corresponding `Predicted_class` for each observation in the holdout set. This file can now be submitted as `mypreds.rds` to obtain feedback on the actual performance of the pipeline on unseen data.
+
+이 아래에:
+“이 파일에는 각 관측치에 대한 최종 예측 Class가 포함되어 있으며,
+과제의 외부 holdout 데이터에 대한 성능 평가에 사용된다” 정도 짧게 설명.
+
 
 ```{r load_holdout, echo = FALSE}
 ## DO NOT CHANGE ANYTHING IN THIS CODE BLOCK

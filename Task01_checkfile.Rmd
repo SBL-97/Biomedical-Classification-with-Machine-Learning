@@ -122,3 +122,20 @@ output: html_document
 #' Required variables: best_final (character)
 #' Required plots: 
 ```
+
+
+
+```{r}
+path_to_checkfile <- "/Users/sangbin/Desktop/대학원/SCEM/CourseWork/Task01_checkfile.Rmd"
+
+# Change lab number to the one you want to check
+path_to_your_file <- "/Users/sangbin/Desktop/대학원/SCEM/CourseWork/Task01.Rmd"
+
+
+mycheck <- consistency_checker(template_path = path_to_checkfile, submission_path = path_to_your_file)
+
+print(mycheck)
+
+summary(mycheck)
+```
+
