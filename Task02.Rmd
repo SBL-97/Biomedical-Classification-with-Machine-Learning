@@ -98,7 +98,7 @@ You can use as many code blocks as needed, but don't overdo it (remember - every
 ### 1.1 Data overview
 
 :::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-The dataset is derived from a binary epitope prediction problem, in which each observation is described by a large set of numerical predictive features. An exploratory data analysis
+The dataset is derived from a binary epitope prediction problem, where each observation is described by a large set of numerical predictive features. An exploratory data analysis
 provided an initial overview of potential dependencies caused by "Info_group", distribution of the target "Class", and the behavior of features "feat_" in terms of scale, variability and missingness.
 :::
 
@@ -113,17 +113,10 @@ glimpse(df)
 ```
 
 :::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-The dataset is high-dimensional with 7403 rows and 390 columns including 2 discrete and 388 continuous variables. This indicates that most of the predictors are numerical, thus there is no need for further categorical encoding to be done. Instead, preprocessing can focus on handling missing values, standardising feature scales, and applying dimensionality reduction.
+The dataset is high-dimensional with 7403 rows and 390 columns including 2 discrete and 388 continuous variables. Since most of the features are numerical, no categorical encoding has to be done. Instead, preprocessing can focus on handling missing values, standardising feature scales, and applying dimensionality reduction.
 :::
 
 ```{r, echo = FALSE}
-# Structure of the dataset.
-# 1) Two ID columns named “Info_PepID” and “Info_pos”. Together, these two columns provide a unique reference to each row.
-# 2) One Group column named “Info_group”
-# 3) Other columns starting with “Info_” that are not informative and should be discarded.
-# 4) A few hundred feature columns with names starting with “feat_”, containing numerical predictive features that were calculated for each observation.
-# 5) 1 Class column, containing the target class.
-
 
 df_summary <- introduce(df) %>% tibble()
 t(df_summary)
@@ -149,7 +142,7 @@ df %>% count(Info_group) %>% summary()
 ```
 
 :::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-The distribution of the variable "Class" seems fairly balanced, showing a split of 59% for the negative and 41% for the positive class. In contrast, the summary of "Info_group" provides clear evidence of dependencies within the dataset, with the number of observations ranging from 1 to 632, with an average of approximately 13.53 observations per group. Therefore, the assumption of independence among the observations is likely to be violated if each observation is treated independently. Hence, to avoid data leakage, preprocessing and modelling should be done at the group level so that all observations from the same group are assigned either to the training or to the evaluation set.
+The distribution of the variable "Class" seems fairly balanced, showing a split of 59% for the negative and 41% for the positive class. In contrast, the summary of "Info_group" provides clear evidence of dependencies within the dataset, with the number of observations ranging from 1 to 632, with an average of approximately 13.53 observations per group. Therefore, the assumption of independence among the observations is likely to be violated if each observation is treated independently. Hence, to avoid data leakage, splitting,preprocessing and modelling should be done at the group level so that all observations from the same group are assigned either to the training or to the evaluation set.
 :::
 
 ### 1.3 Missing values
@@ -253,7 +246,7 @@ ggplot(feat_stats, aes(x = Range)) +
 ```
 
 :::{#Exploratory_Data_Analysis_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-To have a closer look into the features scale, top 20 features with the largest range were extracted and plotted. The result showed highlighted features such as "feat_local_SOCN_Grantham.lag" and "feat_local_MolWeight" that could lead to information overload on the model due to wide spectrum of its range compared to other features.    
+To take a closer look into the features scale, top 20 features with the largest range were extracted and plotted. The result showed highlighted features such as "feat_local_SOCN_Grantham.lag" and "feat_local_MolWeight" that could lead to information overload on the model due to wide spectrum of its range compared to other features.    
 :::
 
 ```{r, echo = FALSE}
@@ -326,6 +319,7 @@ Based on the EDA, the following aspects of the dataset should be taken into acco
 * Split train and test data at the group level of "Info_group" to avoid data leakage.
 * Apply simple median imputation for missing features.
 * Standardise features to a common scale and conduct a dimensionality reduction such as PCA to reduce redundancy and increase stability to the model.
+
 :::
 
 *****
@@ -341,7 +335,7 @@ Add here your data pre-processing and feature selection/engineering steps. Your 
 
 - A code block implementing your pre-processing step.
 
-**In addition** to the regular data transformations emerging from the insights you gathered during EDA, this section must contain the  splitting off of a test set that you'll use later for final performance assessment  (check the CW specs for details).
+**In addition** to the regular data transformations emerging from the insights you gathered during EDA, this section must contain the splitting off of a test set that you'll use later for final performance assessment  (check the CW specs for details).
 
 At the end of this section you should also include a short commentary on what changes the pre-processing has induced in your data (i.e., what did the data "look like" before this step vs. what it "looks like" afterwards.
 
@@ -349,26 +343,11 @@ You can use as many code blocks as needed, but don't overdo it (remember - every
 
 **Note**: In this section you'll be basically defining which data transformations you will later incorporate into your predictive pipeline. When you build the pipeline in the next section, you'll encapsulate all those steps (together with the model) into a single object that you can fit and deploy as a single unit.
 
-### 2.1 Train–test split with groups
+### 2.1 Split train and test data at the group level
 
 :::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
+Since a grouping structure exists in the dataset, the data is split into training and test sets at the group level before the sequential data preprocessing to minimise data leakage.
 :::
-
-참고용 (삭제예정)
-Since the final goal of this task is to build a predictive model, it is important to keep aside an independent portion of the data for final model assessment. To avoid overestimating performance, I create a train–test split early in the analysis and treat the test set as a proxy for future, unseen data. In this dataset, observations are not fully independent: rows that share the same value of `Info_group` are known to be related and should be kept together. For this reason, I do not use a simple random split such as `initial_split()`. Instead, I use a grouped split based on `Info_group`, so that each group appears either entirely in the training set or entirely in the test set. This prevents data leakage, where information from the same group could otherwise leak from the training set into the test set.
-
-참고용 (삭제예정)
-Following the EDA, the first preprocessing step is to isolate a test set for final performance assessment. To obtain an unbiased estimate of generalisation, this test set must not be used during model selection or tuning. Because rows that share the same value of `Info_group` are not independent, the split must be performed at the group level: all observations from a given group should be assigned either to the training set or to the test set, but never split across both. A simple random row-wise split would violate this requirement and lead to data leakage.
-
-여기 텍스트(3–5문장 정도):
-
-- 왜 train/test를 미리 나눠두는지 (과적합 평가, generalisation)  
-- 이 데이터는 Info_group 내에서 의존성이 있기 때문에  
-  → 일반 `initial_split()` 대신 `group_initial_split()`을 써야 한다는 설명  
-- 같은 group이 train과 test에 동시에 들어가면 data leakage가 생긴다는 말
-
-train/test 행 수, 그룹 수가 어느 정도인지 살짝 확인하고 한두 문장으로 적기
 
 ```{r, echo = FALSE}
 set.seed(MY_STUDENT_ID)
@@ -378,60 +357,71 @@ split <- group_initial_split(df, group = Info_group, prop = 0.8)
 df.train <- training(split)
 df.test <- testing(split)
 
+
 nrow(df.train); nrow(df.test)
+rm(df.test)
 ```
 
 :::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
+This split ensures that no Info_group appears in both training and test sets, preserving the independence of the final evaluation. From now onward, only the training data "df.train" will be used for data preprocessing and feature engineering.
 :::
 
-참고용 (삭제예정)
-The resulting split allocates approximately 80% of the observations (and groups) to the training set and 20% to the test set, which is sufficient for both model development and a reasonably sized holdout for evaluation.
+:::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+The preprocessing in this section follow the predefined data structure and assumptions in the task specification. In particular, the target Class is converted into a factor and identifier columns that are not informative are excluded, leaving only numerical features to be used as inputs for modelling.
+:::
 
-참고용 (삭제예정)
-This split allocates roughly 80% of the observations and groups to the training set and keeps the remaining 20% as a holdout test set. The subsequent preprocessing, feature engineering and model fitting steps will be based solely on `train_data`, while `test_data` will only be used later for final model assessment.
+```{r, echo = FALSE}
+# Predefined data structure and assumptions.
+# 1) Two ID columns named “Info_PepID” and “Info_pos”. Together, these two columns provide a unique reference to each row.
+# 2) One Group column named “Info_group”
+# 3) Other columns starting with “Info_” that are not informative and should be discarded.
+# 4) A few hundred feature columns with names starting with “feat_”, containing numerical predictive features that were calculated for each observation.
+# 5) 1 Class column, containing the target class.
 
 
+# Mutate unique ID column, drop non informative variables and convert "Class" class type into factor.
+non_info_var <- c("Info_PepID", "Info_pos", "Info_protein_id")
 
+df.train <- df.train %>% 
+  mutate(Info_ID = paste(Info_PepID, Info_pos, sep = "_")) %>%
+  relocate(Info_ID) %>%
+  select(-all_of(non_info_var)) %>%
+  mutate(Class = as.factor(Class))
+
+glimpse(df.train[, c("Info_ID", "Info_group", "Class")])
+
+```
 
 ### 2.2 Preprocessing recipe
 
 :::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
+Based on the EDA conducted, a recipe function is created to build preprocessing workflows of the data. The recipe will select the "feat_" columns as predictor, impute missing values, standardise predictors scale and conduct PCA for dimensionality reduction.
 :::
 
-참고용 (삭제예정)
-According to the data description, the variables whose names start with `Info_` are mostly identifiers or metadata and are not intended to be used directly as predictors, except for the grouping variable. In the modelling pipeline, I therefore focus on the numerical features whose names start with `feat_` and use these as the predictors for `Class`. Before fitting any models, I need to handle potential missing values and differences in scale across features. To do this in a systematic way, I define a preprocessing recipe that imputes missing values in the predictors (for example, using the median within the training data) and then standardises all feature columns. Because there are several hundred features and they may have very different ranges, normalisation helps many algorithms to behave more stably. If needed, the same framework could also accommodate additional steps such as dimensionality reduction (e.g. PCA) at a later stage. By encoding these steps in a recipe and preparing it only on the training data, I ensure that the estimated preprocessing parameters are not influenced by the test or holdout data, which helps to avoid data leakage.
-
-참고용 (삭제예정)
-For modelling, I do not use the `Info_` variables as predictors, since they are identifiers or metadata rather than informative features. Instead, I focus on the numerical `feat_` variables and treat `Class` as the outcome. Motivated by the EDA, I define a preprocessing recipe that (i) selects the `feat_` columns as predictors, (ii) imputes missing values in the predictors using the median computed from the training data, and (iii) standardises all predictors to have zero mean and unit variance. In later steps, this recipe will also be extended to include a dimensionality reduction step (PCA) for at least one of the modelling pipelines.
-
-
-여기 텍스트(4–7문장):
-
-- Info_PepID, Info_pos, Info_protein_id 등 Info_ 변수들은 예측에 직접 쓰지 않겠다고 설명  
-- `feat_`로 시작하는 수치형 변수들만 predictor로 사용할 것이라고 명시  
-- 결측치 처리를 어떻게 할 계획인지 (예: 중앙값 대체)  
-- 변수 간 스케일 차이가 커보여서 표준화(normalization/standardization)를 적용하겠다는 설명  
-- 필요하면 나중에 PCA 같은 차원 축소를 추가할 수도 있다고 한 줄 언급
-
-
-
 ```{r, echo = FALSE}
-```
 
-```{r, echo = FALSE}
-```
+EDA_recipe <- recipe(Class ~ ., data = df.train) %>%
+  update_role(Info_ID, new_role = "id") %>%
+  update_role(Info_group, new_role = "group") %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_pca(all_numeric_predictors(), threshold = 0.95)
 
-```{r, echo = FALSE}
-```
-
-```{r, echo = FALSE}
+EDA_recipe 
 ```
 
 :::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
 some words here..........
 :::
+
+
+참고용 (삭제예정)
+Because the overall proportion of missing values is extremely low and many predictors exhibit skewed distributions with occasional extreme values, median imputation was chosen as a simple and robust strategy, instead of mean imputation.
+
+More aggressive treatments such as trimming or winsorisation were considered. However, extreme values in variables such as feat_local_MolWeight and feat_local_SOCN_Grantham.lag are likely to reflect genuine biological variation rather than measurement errors. For this reason, these values were retained, and their influence is instead controlled through standardisation (and, in one pipeline, PCA).
+
+Given the very low proportion of missing values and the presence of skewed and heavy-tailed numerical features, median imputation was adopted as a simple and robust choice over mean imputation. Trimming or winsorisation of extreme values was considered but not applied, since the largest ranges are likely to arise naturally from the feature definitions (e.g. molecular weight, sequence-order descriptors); instead, their influence is mitigated by standardisation (and later by PCA in a separate modelling pipeline).
+
 
 참고용 (삭제예정)
 By encoding these transformations in a recipe and preparing it only on the training data, I ensure that the imputation and scaling parameters are estimated without reference to the test or holdout sets. When the recipe is later applied to `test_data` or `df_holdout`, exactly the same transformations are used with the parameters learned from `train_data`, which helps to prevent data leakage. Overall, the preprocessing step transforms the original high-dimensional feature space into a standardised representation that is more suitable for the models considered in the next section.
