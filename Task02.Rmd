@@ -1,10 +1,12 @@
 ---
 title: "SCEM Final Coursework"
-subtitle: "Task II"
 author: "Sangbin Lim (2747409)"
-output: html_document
-editor_options: 
-  markdown: 
+subtitle: Task II
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  markdown:
     wrap: 72
 ---
 
@@ -350,26 +352,7 @@ You can use as many code blocks as needed, but don't overdo it (remember - every
 ### 2.1 Split train and test data at the group level
 
 :::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-Since a grouping structure exists in the dataset, the data is split into training and test sets at the group level before the sequential data preprocessing to minimise data leakage.
-:::
-
-```{r, echo = FALSE}
-set.seed(MY_STUDENT_ID)
-
-split <- group_initial_split(df, group = Info_group, prop = 0.8)
-
-df.train_raw <- training(split)
-df.test_raw <- testing(split)
-
-rm(df.test_raw)
-```
-
-:::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-This split ensures that no Info_group appears in both training and test sets, preserving the independence of the final evaluation. From now onward, only the training data "df.train" will be used for data preprocessing and feature engineering.
-:::
-
-:::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-The preprocessing in this section follow the predefined data structure and assumptions in the task specification. In particular, the target Class is converted into a factor and identifier columns that are not informative are excluded, leaving only numerical features to be used as inputs for modelling.
+Since a grouping structure exists in the dataset, the data is split into training and test sets at the group level before the sequential data preprocessing to minimise data leakage. However, the preprocessing in this section follow the predefined data structure and assumptions in the task specification. In particular, the target Class is converted into a factor and identifier columns that are not informative are excluded, leaving only numerical features to be used as inputs for modelling.
 :::
 
 ```{r, echo = FALSE}
@@ -380,19 +363,37 @@ The preprocessing in this section follow the predefined data structure and assum
 # 4) A few hundred feature columns with names starting with “feat_”, containing numerical predictive features that were calculated for each observation.
 # 5) 1 Class column, containing the target class.
 
-# Mutate unique ID column, drop non informative variables and convert "Class" type into a factor.
 non_inform_var <- c("Info_PepID", "Info_pos", "Info_protein_id")
+df_raw <- df
 
-df.train <- df.train_raw %>% 
+# Mutate unique ID column, drop non informative variables and convert "Class" type into a factor.
+df_modified <- df_raw %>% 
   mutate(
     Info_ID = paste(Info_PepID, Info_pos, sep = "_"),
-    Class = as.factor(Class), 
+    Class = factor(Class, 
+                   levels = c(1, -1),
+                   labels = c("epitope", "non-epitope")), 
     Info_group = as.factor(Info_group)) %>%
   relocate(Info_ID) %>%
   select(-all_of(non_inform_var))
 
-glimpse(df.train[, c("Info_ID", "Info_group", "Class")])
+glimpse(df_modified[, c("Info_ID", "Info_group", "Class")])
 ```
+
+
+```{r, echo = FALSE}
+set.seed(MY_STUDENT_ID)
+
+split <- group_initial_split(df_modified, group = Info_group, prop = 0.8)
+
+df.train <- training(split)
+df.test <- testing(split)
+
+```
+
+:::{#Data_preprocessing_and_feature_engineering_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+This split ensures that no Info_group appears in both training and test sets, preserving the independence of the final evaluation. From now onward, only the training data "df.train" will be used for data preprocessing and feature engineering.
+:::
 
 ### 2.2 Preprocessing recipe
 
@@ -534,7 +535,7 @@ The performance of the models are assessed using grouped 5-fold cross-validation
 set.seed(MY_STUDENT_ID)
 
 # Grouped 5-fold cross validation
-cv_folds <- group_vfold_cv(df.train, 
+folds <- group_vfold_cv(df.train, 
                            group = Info_group, 
                            v = 5)
 ```
@@ -542,7 +543,7 @@ cv_folds <- group_vfold_cv(df.train,
 ### 3.2 Baseline model: Logistic regression
 
 :::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-Before the finalisation of the model, with Logistic regression as the baseline model, PCA retaining 90% and 95% of the variance is compared. Besides showing the ideal number of PCs required for the model, these results also serve as a validation that the preprocessing pipeline is working as intended.
+Before the finalisation of the model, with Logistic regression as the baseline model, PCA retaining 90% and 95% of the variance is compared. Besides showing the ideal number of PCs required for the model, these results also serve as a validation that the preprocessing recipe is working as intended.
 :::
 
 ```{r, echo = FALSE}
@@ -552,81 +553,130 @@ cum_variance_90_recipe <- test_recipe_without_pca %>%
 cum_variance_95_recipe <- test_recipe_without_pca %>%
   step_pca(all_numeric_predictors(), num_comp = cum_variance_95)
 
-# Logistic regression model
+# Logistic regression model set up
 log_reg_model <- logistic_reg(mode = "classification") %>% set_engine("glm")
 
-log_pca90_wf <- workflow() %>%
-  add_model(log_spec) %>%
-  add_recipe(pca90_recipe)
+cum_variance_90_wf <- workflow() %>%
+  add_model(log_reg_model) %>%
+  add_recipe(cum_variance_90_recipe)
 
-log_pca95_wf <- workflow() %>%
-  add_model(log_spec) %>%
-  add_recipe(pca95_recipe)
+cum_variance_95_wf <- workflow() %>%
+  add_model(log_reg_model) %>%
+  add_recipe(cum_variance_95_recipe)
+
 ```
 
 ```{r, echo = FALSE}
+# Fit the model using cross-validation.
+set.seed(MY_STUDENT_ID)
+
+metric_assess <- metric_set(accuracy, roc_auc, ppv, npv, f_meas)
+
+cum_variance_90_fit <- cum_variance_90_wf %>%
+  fit_resamples(folds, metrics = metric_assess)
+
+cum_variance_95_fit <- cum_variance_95_wf %>%
+  fit_resamples(folds, metrics = metric_assess)
+
 ```
 
 
-:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
-:::
-
-참고용 (삭제예정)
-The baseline logistic regression achieves an average F1 score of approximately [fill in] and an accuracy of [fill in] across the cross-validation folds. This indicates that a linear classifier can capture some of the signal in the data, but also leaves room for improvement using more flexible models or dimensionality reduction.
-
-참고용 (삭제예정)
-In our experiments, the logistic regression achieved an average F1 score of approximately XX on the training folds, which is reasonable but leaves room for improvement, especially in terms of capturing more complex relationships between the features and the target.
-
-코드 아래에:
-CV 결과에서 F1, accuracy가 어느 정도인지 한두 문장으로 정리
-baseline으로 사용할 만한지 간단 코멘트
-
-
-### 3.3 Tuned model with dimensionality reduction (예: logistic + PCA, 또는 다른 모델 + PCA)
-
-:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
-:::
-
-참고용 (삭제예정)
-To explore a more flexible modelling strategy and satisfy the coursework requirement of including dimensionality reduction, I build a second pipeline that combines PCA with a classifier. Starting from the `pca_rec` recipe defined earlier, I tune the number of principal components as well as model-specific hyperparameters. This can help to mitigate issues caused by the very high dimensionality and correlation structure of the original features, while still retaining most of the predictive signal in a lower-dimensional space.
-
-참고용 (삭제예정)
-To capture potential nonlinear relationships and interactions between features, I also consider a random forest classifier. Random forests are generally robust to high-dimensional feature spaces and can model complex decision boundaries without requiring extensive feature engineering. In this analysis, I tune at least two key hyperparameters: the number of predictors considered at each split (`mtry`) and the minimum number of samples required in a terminal node (`min_n`). These hyperparameters are explored over a grid using the same grouped cross-validation folds as for the baseline model. After tuning, I compare the cross-validated F1 scores of the random forest to those of the logistic regression. If the random forest consistently achieves a higher F1 score, this suggests that the additional flexibility of the ensemble model is beneficial for this problem; otherwise, the simpler baseline might be preferred.
-
-여기 텍스트:
-
-- 비선형 관계를 잡을 수 있고 고차원 피처에도 비교적 강한 모델로 랜덤 포레스트를 사용하겠다는 설명  
-- 최소 2개의 hyperparameter를 튜닝할 계획임을 밝히기 (예: mtry, min_n)
-
-
 ```{r, echo = FALSE}
+# Fit metrics of PCA retaining 90% of the variance.
+collect_metrics(cum_variance_90_fit)
 ```
 
 ```{r, echo = FALSE}
+# Fit metrics of PCA retaining 95% of the variance.
+collect_metrics(cum_variance_95_fit)
 ```
 
 ```{r, echo = FALSE}
-```
-
-```{r, echo = FALSE}
+# PCA retaining 90% of the variance shows the ideal number of PCs required.
+final_log_reg_model_wf <- cum_variance_90_wf
+final_log_reg_model_fit <- cum_variance_90_fit 
+final_log_reg_model_metrics <- collect_metrics(cum_variance_90_fit)
 ```
 
 :::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
+Since grouped 5-fold Cross-validation show almost identical accuracy, F1 and ROC AUC for the 90% and 95% PCA thresholds, the lower-dimensional 90% model will be chosen for the final recipe.
 :::
 
-참고용 (삭제예정)
-Across the grid of tuning parameters, the best PCA-based logistic regression pipeline attains an average F1 score of around [fill in], which is [higher/lower/similar] compared to the baseline model without dimensionality reduction. Based on this comparison, I select [state which pipeline: e.g. the PCA-based logistic regression] as the final modelling pipeline, since it offers [brief justification: e.g. better F1 performance and a more compact feature representation].
-(여기서 baseline vs PCA 모델 중 무엇을 최종 선택하는지 한 줄로 명확히 써 주는 게 중요함.)
+### 3.3 Model comparison: logistic vs random forest 
 
-참고용 (삭제예정)
-In our results, the best random forest configuration reached an average F1 score of approximately YY, which was higher/lower than the baseline, indicating that it is (or is not) a clear improvement over logistic regression for this dataset.
+:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+To assess whether performance varies across different modelling approaches, random forest model is compared with the logistic regression model.
+:::
 
-이 밑에:
-F1 기준으로 어떤 parameter 조합이 괜찮은지 간단히 언급
-baseline(logistic)과 성능을 비교해서 “RF가 더 좋다/비슷하다” 설명
+```{r, echo = FALSE}
+# Final Recipe to be used.
+final_recipe <- recipe(Class ~ ., data = df.train) %>%
+  update_role(Info_ID, new_role = "id") %>%
+  update_role(Info_group, new_role = "group") %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_pca(all_numeric_predictors(), num_comp = cum_variance_90)
+
+```
+
+```{r, echo = FALSE}
+# Random forest model set up.
+rf_model <- rand_forest(mtry = tune(),
+                             min_n = tune(),
+                             trees = 100,
+                             mode = "classification") %>% set_engine("ranger")
+
+rf_model_wf <- workflow() %>%
+  add_model(rf_model) %>%
+  add_recipe(final_recipe)
+
+# set mtry as sqrt(96), thus 10 up to 60 and min_n 5 to 20 to balance over/under-fitting.
+rf_grid <- grid_regular(
+  mtry(range = c(10, 60)),
+  min_n(range = c(5, 20)),
+  levels = 2
+)
+```
+
+```{r, echo = FALSE}
+# Fit the model using cross-validation.
+set.seed(MY_STUDENT_ID)
+
+ctrl <- control_grid(verbose = TRUE, save_pred = FALSE)
+
+rf_model_fit <- rf_model_wf %>% 
+  tune_grid(resamples = folds, 
+            grid = rf_grid, 
+            metrics = metric_assess,
+            control = ctrl)
+```
+
+```{r, echo = FALSE}
+collect_metrics(rf_model_fit)
+```
+
+```{r, echo = FALSE}
+# Logistic Regression model's best F1
+log_reg_best_f1 <- collect_metrics(final_log_reg_model_fit) %>%
+  filter(.metric == "f_meas") %>%
+  arrange(desc(mean)) %>%
+  slice(1) %>%
+  mutate(model = "logistic")
+
+# Random Forest model's best F1
+rf_best_f1 <- collect_metrics(rf_model_fit) %>%
+  filter(.metric == "f_meas") %>%
+  arrange(desc(mean)) %>%
+  slice(1) %>%
+  mutate(model = "random_forest")
+
+model_comparison <- bind_rows(log_reg_best_f1, rf_best_f1)
+model_comparison
+```
+
+:::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
+The comparison of F1-score between the two models show that the random forest model with F1 score $\approx$ 0.60 has better score than logistic regression model with $\approx$ 0.48. Therefore, the random forest model is selected for further evaluation.
+:::
 
 *****
 
@@ -642,47 +692,54 @@ Use your pipeline to generate predictions for your test set, and calculate the o
 You can use as many code blocks as needed, but it's likely that this section can be completed with a single one. Make sure that your performance indicators are clearly echoed, so that a reader can easily check if after re-running your script. Add a short comment on the observed performance (is it good? Is it poor? Remember that you're not being assessed on the performance of your models, but on the soundness of your approach).
 :::
 
-
-
 :::{#Model_assessment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
+Hyperparameter tuned random forest model is refitted on the whole training set with finalized preprocessing recipe. It is then used to generate predictions for the test data which will provide an unbiased estimate of how well the model is expected to perform on new, unseen data such as the held-out test set.
 :::
 
-참고용 (삭제예정)
-In this section, I estimate the generalisation performance of the final selected pipeline on the holdout test set created earlier. I first finalise the workflow with the best tuning parameters and fit it on the full training data, then use it to generate predictions for `test_data`. The resulting F1 score on the test set provides an unbiased estimate of how well the model is expected to perform on new, unseen data.
-
-참고용 (삭제예정)
-Once the final model and its hyperparameters have been chosen based on the grouped cross-validation results, I refit this model on the full training set using the same preprocessing recipe. The held-out test set, which was set aside earlier and not used during model selection or tuning, is then used for a final performance assessment. This evaluation provides an estimate of how well the model is expected to generalise to new, unseen data drawn from the same population. On the test set, I again report the F1 score (along with accuracy and the confusion matrix) to remain consistent with the metrics used during cross-validation.
-
-여기 텍스트(3–5문장):
-
-- 이제는 train_data 전체로 최종 모델을 학습하고,  
-  처음에 떼어놓았던 test_data로 generalisation 성능을 평가하겠다고 설명  
-- test set은 모델 선택/튜닝에는 전혀 사용하지 않았다는 점을 강조
+```{r, echo = FALSE}
+# Redefine the workflow and fit test using the optimised hyperparameters.
+final_wf <- rf_model_wf %>% finalize_workflow(rf_best_f1)
+final_fit <- final_wf %>% fit(data = df.train)
+```
 
 
 ```{r, echo = FALSE}
+wf_final_fit <- final_wf %>% last_fit(split, metrics = metric_assess)
+wf_final_fit %>% collect_metrics()
+
+# The estimated ROC curve for the final model
+wf_final_fit %>% 
+  collect_predictions() %>% 
+  roc_curve(Class, .pred_epitope) %>% 
+  autoplot()
+
 ```
 
 ```{r, echo = FALSE}
+# Prediction
+test_predictions <- predict(final_fit, df.test, type = "prob") %>%
+  bind_cols(predict(final_fit, df.test, type = "class")) %>%
+  bind_cols(df.test %>% select(Class))
+
+test_results <- metric_assess(
+  data    = test_predictions,
+  truth   = Class,
+  estimate = .pred_class,
+  .pred_epitope)
+
+test_results
 ```
 
+
 ```{r, echo = FALSE}
+# Confusion matrix
+test_conf_mat <- conf_mat(test_predictions, truth = Class, estimate = .pred_class)
+test_conf_mat
 ```
 
 :::{#Model_assessment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
+The final random forest model achieved an accuracy of 0.66, F1-score of $\approx$ 0.62, precision(PPV) of $\approx$ 0.70 and Negative predictive value(NPV) of $\approx$ 0.66, with a ROC AUC of $\approx$ 0.77. The confusion matrix shows that the model correctly identifies about half of the true epitopes (393 true positives vs 316 false negatives) and reasonably often rejects non-epitopes (604 true negatives vs 165 false positives), indicating moderate rather than outstanding predictive performance. This moderate performance is likely driven by the inherent difficulty of the epitope prediction problem, the limited discriminative power of the available features, and the relatively simple tuning of the random forest hyperparameters. Overall, these results suggest that the model captures some useful signal for epitope prediction but still leaves substantial room for improvement.
 :::
-
-참고용 (삭제예정)
-The final pipeline achieves an F1 score of approximately [fill in] on the test set, which is broadly consistent with the cross-validated performance on the training data. This suggests that the model is not severely overfitting and should generalise reasonably well to similar new data.
-
-참고용 (삭제예정)
-The final model achieved an F1 score of approximately ZZ on the test set, which is broadly consistent with the cross-validated performance. This suggests that the model is not severely overfitting the training data, and that its estimated generalisation performance is reasonably stable.
-
-코드 아래에는:
-test set F1이 어느 정도인지, CV 결과와 비교해서
-“과적합이 심하지 않다/약간 성능이 떨어지지만 허용 범위다” 같은 해석을 2–4문장으로 정리.
 
 *****
 
@@ -706,37 +763,45 @@ Make sure that the data file __df_holdout.rds__ is placed in the same folder as 
 :::
 
 :::{#Model_deployment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
+The last step is to deploy the final trained model to the unseen holdout data ("df_holdout") to generate predictions, which are then saved for external evaluation.
 :::
-
-참고용 (삭제예정)
-Finally, I deploy the fitted pipeline on the external holdout dataset `df_holdout`, for which the class labels are unknown. Using the same preprocessing and model as in the previous section, I generate predicted classes and save them in the format required by the coursework for submission.
-
-참고용 (삭제예정)
-The last step is to deploy the final trained model on the separate holdout dataset (`df_holdout`), for which the true class labels are not provided. Using the same preprocessing recipe and model configuration as in the previous sections, I generate predicted classes for each observation in the holdout set. The predictions are then stored in the format required by the coursework (for example, including the relevant identifiers and saving the result as an RDS file). This file contains the model’s final predictions for all holdout observations and will be used by the instructors to evaluate the model’s performance on completely unseen data.
-
-여기 텍스트:
-
-- 최종 모델을 실제 새로운 데이터(df_holdout)에 적용해서 Class를 예측하는 단계라는 설명  
-- 이 예측 결과는 과제가 요구하는 형식(RDS 파일 등)으로 저장되고,  
-  숨겨진 정답과 비교되어 최종 점수에 반영된다는 점
-  
-  
-:::{#Model_deployment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-some words here..........
-:::
-
-참고용 (삭제예정)
-The object `mypreds` contains the identifiers `Info_PepID`, `Info_pos`, and the corresponding `Predicted_class` for each observation in the holdout set. This file can now be submitted as `mypreds.rds` to obtain feedback on the actual performance of the pipeline on unseen data.
-
-이 아래에:
-“이 파일에는 각 관측치에 대한 최종 예측 Class가 포함되어 있으며,
-과제의 외부 holdout 데이터에 대한 성능 평가에 사용된다” 정도 짧게 설명.
-
 
 ```{r load_holdout, echo = FALSE}
 ## DO NOT CHANGE ANYTHING IN THIS CODE BLOCK
 df_holdout <- readRDS("df_holdout.rds")
+head(df_holdout)
+```
+
+
+```{r, echo = FALSE}
+
+df_holdout_modified <- df_holdout %>%
+  mutate(
+    Info_ID = paste(Info_PepID, Info_pos, sep = "_"),
+    Info_group = as.factor(Info_group)) %>%
+  relocate(Info_ID) %>%
+  select(-all_of(non_inform_var))
+
+glimpse(df_holdout_modified[, c("Info_ID", "Info_group")])
+```
+```{r, echo = FALSE}
+# Prediction.
+df_holdout_predictions <- predict(final_fit, df_holdout_modified, type = "class")
+
+# The new data frame to be submitted.
+df_holdout_result <- df_holdout %>%
+  select(Info_PepID, Info_pos) %>%
+  mutate(Predicted_class = df_holdout_predictions$.pred_class)
+
+df_holdout_result
+
+
+```
+
+```{r, echo = FALSE}
+# Save the result to RDS file.
+saveRDS(df_holdout_result, file = "mypreds.rds")
+
 ```
 
 *****
