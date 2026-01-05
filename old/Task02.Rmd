@@ -593,9 +593,9 @@ collect_metrics(cum_variance_95_fit)
 
 ```{r, echo = FALSE}
 # PCA retaining 90% of the variance shows the ideal number of PCs required.
-log_reg_model_90_wf <- cum_variance_90_wf
-log_reg_model_90_fit <- cum_variance_90_fit 
-log_reg_model_90_metrics <- collect_metrics(cum_variance_90_fit)
+final_log_reg_model_wf <- cum_variance_90_wf
+final_log_reg_model_fit <- cum_variance_90_fit 
+final_log_reg_model_metrics <- collect_metrics(cum_variance_90_fit)
 ```
 
 :::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
@@ -605,7 +605,7 @@ Since grouped 5-fold Cross-validation show almost identical accuracy, F1 and ROC
 ### 3.3 Model comparison: logistic vs random forest 
 
 :::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-To assess whether predictive performance varies across different modelling approaches, a penalized logistic regression model and random forest model were compared against a baseline logistic regression model.
+To assess whether performance varies across different modelling approaches, random forest model is compared with the logistic regression model.
 :::
 
 ```{r, echo = FALSE}
@@ -617,65 +617,6 @@ final_recipe <- recipe(Class ~ ., data = df.train) %>%
   step_normalize(all_numeric_predictors()) %>%
   step_pca(all_numeric_predictors(), num_comp = cum_variance_90)
 
-```
-
-```{r, echo = FALSE}
-# Logistic regression model set up.
-final_log_reg_model <- logistic_reg(mode = "classification") %>% set_engine("glm")
-
-final_log_reg_model_wf <- workflow() %>%
-  add_model(final_log_reg_model) %>%
-  add_recipe(final_recipe)
-
-```
-
-```{r, echo = FALSE}
-# Fit the Logistic regression model using cross-validation.
-set.seed(MY_STUDENT_ID)
-
-final_log_reg_model_fit <- final_log_reg_model_wf %>%
-  tune_grid(resamples = folds,
-            metrics = metric_assess)
-
-```
-
-```{r, echo = FALSE}
-collect_metrics(final_log_reg_model_fit)
-```
-
-```{r, echo = FALSE}
-# penalized logistic regression model set up.
-pen_log_model <- logistic_reg(
-  mode    = "classification",
-  penalty = tune(), 
-  mixture = 0         
-) %>%
-  set_engine("glmnet")
-
-pen_log_model_wf <- workflow() %>%
-  add_model(pen_log_model) %>%
-  add_recipe(final_recipe)
-
-# set penalty parameter as -4 to 0.
-pen_log_grid <- grid_regular(
-  penalty(range = c(-4, 0)),
-  levels = 20
-)
-
-```
-
-```{r, echo = FALSE}
-# Fit the penalized logistic regression model using cross-validation.
-set.seed(MY_STUDENT_ID)
-
-pen_log_model_fit <- pen_log_model_wf %>% 
-  tune_grid(resamples = folds, 
-            grid = pen_log_grid, 
-            metrics = metric_assess)
-```
-
-```{r, echo = FALSE}
-collect_metrics(pen_log_model_fit)
 ```
 
 ```{r, echo = FALSE}
@@ -698,13 +639,16 @@ rf_grid <- grid_regular(
 ```
 
 ```{r, echo = FALSE}
-# Fit the random forest model using cross-validation.
+# Fit the model using cross-validation.
 set.seed(MY_STUDENT_ID)
+
+ctrl <- control_grid(verbose = TRUE, save_pred = FALSE)
 
 rf_model_fit <- rf_model_wf %>% 
   tune_grid(resamples = folds, 
             grid = rf_grid, 
-            metrics = metric_assess)
+            metrics = metric_assess,
+            control = ctrl)
 ```
 
 ```{r, echo = FALSE}
@@ -719,13 +663,6 @@ log_reg_best_f1 <- collect_metrics(final_log_reg_model_fit) %>%
   slice(1) %>%
   mutate(model = "logistic")
 
-# Penalized Logistic Regression model's best F1
-pen_log_best_f1 <- collect_metrics(pen_log_model_fit) %>% 
-  filter(.metric == "f_meas") %>%
-  arrange(desc(mean)) %>%
-  slice(1) %>%
-  mutate(model = "penalized_logistic")
-
 # Random Forest model's best F1
 rf_best_f1 <- collect_metrics(rf_model_fit) %>%
   filter(.metric == "f_meas") %>%
@@ -733,12 +670,12 @@ rf_best_f1 <- collect_metrics(rf_model_fit) %>%
   slice(1) %>%
   mutate(model = "random_forest")
 
-model_comparison <- bind_rows(log_reg_best_f1, pen_log_best_f1, rf_best_f1)
+model_comparison <- bind_rows(log_reg_best_f1, rf_best_f1)
 model_comparison
 ```
 
 :::{#Modelling_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-The comparison of F1-score between the two models show that the random forest model with F1 score $\approx$ 0.60 has better score than logistic regression model with $\approx$ 0.48 and penalized logistic regression model with $\approx$ 0.47 . Therefore, the random forest model is selected for further evaluation.
+The comparison of F1-score between the two models show that the random forest model with F1 score $\approx$ 0.60 has better score than logistic regression model with $\approx$ 0.48. Therefore, the random forest model is selected for further evaluation.
 :::
 
 *****
@@ -767,8 +704,6 @@ final_fit <- final_wf %>% fit(data = df.train)
 
 
 ```{r, echo = FALSE}
-set.seed(MY_STUDENT_ID)
-
 wf_final_fit <- final_wf %>% last_fit(split, metrics = metric_assess)
 wf_final_fit %>% collect_metrics()
 
@@ -803,7 +738,7 @@ test_conf_mat
 ```
 
 :::{#Model_assessment_txt .message style="color: black; border: 1px outset black; background-color: #eeeffe;"}
-The final random forest model achieved an accuracy of 0.66, F1-score of $\approx$ 0.60, precision(PPV) of $\approx$ 0.69 and Negative predictive value(NPV) of $\approx$ 0.65, with a ROC AUC of $\approx$ 0.76. The confusion matrix shows that the model correctly identifies about half of the true epitopes (true positives vs false negatives) and reasonably often rejects non-epitopes (true negatives vs false positives), indicating moderate rather than outstanding predictive performance. This moderate performance may be due to difficulty of the epitope prediction problem, the limited discriminative power of the available features, and the relatively simple tuning of the random forest hyperparameters. Overall, these results suggest that the model captures some useful signal for epitope prediction but still leaves substantial room for improvement.
+The final random forest model achieved an accuracy of 0.66, F1-score of $\approx$ 0.62, precision(PPV) of $\approx$ 0.70 and Negative predictive value(NPV) of $\approx$ 0.66, with a ROC AUC of $\approx$ 0.77. The confusion matrix shows that the model correctly identifies about half of the true epitopes (393 true positives vs 316 false negatives) and reasonably often rejects non-epitopes (604 true negatives vs 165 false positives), indicating moderate rather than outstanding predictive performance. This moderate performance is likely driven by the inherent difficulty of the epitope prediction problem, the limited discriminative power of the available features, and the relatively simple tuning of the random forest hyperparameters. Overall, these results suggest that the model captures some useful signal for epitope prediction but still leaves substantial room for improvement.
 :::
 
 *****

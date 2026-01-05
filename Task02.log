@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.11.22)  30 NOV 2025 05:12
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.11.22)  4 DEC 2025 05:49
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -536,14 +536,29 @@ Overfull \hbox (44.74348pt too wide) in paragraph at lines 1606--1606
 []\T1/lmtt/m/n/10 ##  $ Info_group: Factor w/ 547 levels "2","3","4","5",..: 54 321 215 48 139 371 29 41 178 133 ...[] 
  []
 
-[28] [29] [30] [31] [32]
-<Task02_files/figure-latex/unnamed-chunk-37-1.pdf, id=222, 469.755pt x 325.215pt>
-File: Task02_files/figure-latex/unnamed-chunk-37-1.pdf Graphic file (type pdf)
-<use Task02_files/figure-latex/unnamed-chunk-37-1.pdf>
-Package pdftex.def Info: Task02_files/figure-latex/unnamed-chunk-37-1.pdf  used on input line 1845.
+[28] [29] [30]
+Overfull \hbox (28.99353pt too wide) in paragraph at lines 1736--1736
+[]\T1/lmtt/m/n/10 ## > A | warning: While computing binary `precision()`, no predicted events were detected (i.e.[] 
+ []
+
+
+Overfull \hbox (34.24352pt too wide) in paragraph at lines 1736--1736
+[]\T1/lmtt/m/n/10 ##                Note that 467 true event(s) actually occurred for the problematic event level,[] 
+ []
+
+
+Overfull \hbox (49.99347pt too wide) in paragraph at lines 1736--1736
+[]\T1/lmtt/m/n/10 ## There were issues with some computations   A: x1There were issues with some computations   A: x1[] 
+ []
+
+[31] [32]
+<Task02_files/figure-latex/unnamed-chunk-43-1.pdf, id=223, 469.755pt x 325.215pt>
+File: Task02_files/figure-latex/unnamed-chunk-43-1.pdf Graphic file (type pdf)
+<use Task02_files/figure-latex/unnamed-chunk-43-1.pdf>
+Package pdftex.def Info: Task02_files/figure-latex/unnamed-chunk-43-1.pdf  used on input line 1842.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[33{/Users/sangbin/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/Users/sangbin/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}] [34 <./Task02_files/figure-latex/unnamed-chunk-37-1.pdf>]
-Overfull \hbox (2.7436pt too wide) in paragraph at lines 1971--1971
+[33{/Users/sangbin/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/Users/sangbin/Library/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}] [34 <./Task02_files/figure-latex/unnamed-chunk-43-1.pdf>]
+Overfull \hbox (2.7436pt too wide) in paragraph at lines 1968--1968
 []\T1/lmtt/m/n/10 ## Warning: Novel levels found in column "Info_group": "1", "10", "11", "21", "38", "166",[] 
  []
 
@@ -565,7 +580,7 @@ Here is how much of TeX's memory you used:
  14 hyphenation exceptions out of 8191
  89i,6n,93p,660b,636s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr7.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb></Users/sangbin/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt10.pfb>
-Output written on Task02.pdf (36 pages, 329252 bytes).
+Output written on Task02.pdf (36 pages, 330050 bytes).
 PDF statistics:
  379 PDF objects out of 1000 (max. 8388607)
  304 compressed objects within 4 object streams
